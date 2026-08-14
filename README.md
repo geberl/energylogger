@@ -10,7 +10,7 @@ by Valer Bocan. Standard library only — no third-party dependencies.
 ## Build
 
 ```bash
-go build -o energylogger .
+go build -o energylogger ./cmd/...
 ```
 
 ## Usage
@@ -143,7 +143,7 @@ real device captures in `testdata/` and compares all three outputs against
 review the diff:
 
 ```bash
-go test -run TestRunGolden -update .
+go test -run TestRunGolden ./cmd/ -update
 ```
 
 Extremum tie-breaking follows the original deliberately — the last of several

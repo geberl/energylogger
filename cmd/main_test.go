@@ -16,13 +16,17 @@ import (
 // review the diff.
 var updateGolden = flag.Bool("update", false, "rewrite the golden files in testdata/golden")
 
+// testdataDir is the repository-wide testdata folder, one level above this
+// package.
+var testdataDir = filepath.Join("..", "testdata")
+
 var outputFiles = []string{historyTextFile, historyCSVFile, statsTextFile}
 
 // TestRunGolden decodes the real device captures in testdata and compares all
 // three output files against the recorded expectations.
 func TestRunGolden(t *testing.T) {
 	outDir := t.TempDir()
-	if code := run([]string{"-quiet", "-input", "testdata", "-output", outDir}, io.Discard); code != 0 {
+	if code := run([]string{"-quiet", "-input", testdataDir, "-output", outDir}, io.Discard); code != 0 {
 		t.Fatalf("run exited with code %d, want 0", code)
 	}
 
@@ -31,7 +35,7 @@ func TestRunGolden(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading generated %s: %v", name, err)
 		}
-		goldenPath := filepath.Join("testdata", "golden", name)
+		goldenPath := filepath.Join(testdataDir, "golden", name)
 		if *updateGolden {
 			if err := os.WriteFile(goldenPath, got, 0o644); err != nil {
 				t.Fatalf("updating %s: %v", goldenPath, err)
@@ -73,7 +77,7 @@ func itoa(n int) string {
 
 func TestRunPositionalArguments(t *testing.T) {
 	outDir := t.TempDir()
-	if code := run([]string{"-quiet", "testdata", outDir}, io.Discard); code != 0 {
+	if code := run([]string{"-quiet", testdataDir, outDir}, io.Discard); code != 0 {
 		t.Fatalf("run exited with code %d, want 0", code)
 	}
 	for _, name := range outputFiles {
@@ -85,7 +89,7 @@ func TestRunPositionalArguments(t *testing.T) {
 
 func TestRunFlagsWinOverPositionalArguments(t *testing.T) {
 	outDir := t.TempDir()
-	code := run([]string{"-quiet", "-output", outDir, "testdata", filepath.Join(outDir, "ignored")}, io.Discard)
+	code := run([]string{"-quiet", "-output", outDir, testdataDir, filepath.Join(outDir, "ignored")}, io.Discard)
 	if code != 0 {
 		t.Fatalf("run exited with code %d, want 0", code)
 	}
@@ -171,7 +175,7 @@ func TestRunUnusableOutputFolder(t *testing.T) {
 		t.Fatal(err)
 	}
 	var sb strings.Builder
-	if code := run([]string{"-input", "testdata", "-output", blocker}, &sb); code != 1 {
+	if code := run([]string{"-input", testdataDir, "-output", blocker}, &sb); code != 1 {
 		t.Errorf("exit code = %d, want 1", code)
 	}
 	if !strings.Contains(sb.String(), "Failed to create folder") {
@@ -183,7 +187,7 @@ func TestRunUnusableOutputFolder(t *testing.T) {
 // wrote when the input and output folders are the same.
 func TestRunIgnoresItsOwnOutput(t *testing.T) {
 	dir := t.TempDir()
-	capture, err := os.ReadFile(filepath.Join("testdata", "A04FC8D2.BIN"))
+	capture, err := os.ReadFile(filepath.Join(testdataDir, "A04FC8D2.BIN"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +219,7 @@ func TestRunIgnoresItsOwnOutput(t *testing.T) {
 }
 
 func TestDedupeByTimestamp(t *testing.T) {
-	events, err := voltcraft.ParseFile(filepath.Join("testdata", "A04FC8D2.BIN"))
+	events, err := voltcraft.ParseFile(filepath.Join(testdataDir, "A04FC8D2.BIN"))
 	if err != nil {
 		t.Fatal(err)
 	}
