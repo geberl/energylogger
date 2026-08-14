@@ -1,0 +1,57 @@
+==== OVERALL STATISTICS ==================
+Interval: [2014-08-14 01:54]-[2014-09-12 23:59] (29d:22h:05m)
+Average consumption: 0.14kWh/day | Projected: 4.17kWh/month or 50.68kWh/year.
+
+- ACTIVE POWER
+Total energy consumption: 4.15kWh.
+Peak power was 1.31kW and occured on [2014-09-12 08:15].
+Minute by minute average power: 0.07kW.
+
+- APPARENT POWER
+Total energy consumption: 4.63kVAh.
+Peak power was 1.41kVA and occured on [2014-09-12 08:15].
+Minute by minute average power: 0.07kVA.
+
+- VOLTAGE
+Minimum voltage was 196.1V and occured on [2014-08-14 23:43].
+Maximum voltage was 226.1V and occured on [2014-09-12 16:05].
+Minute by minute average voltage: 216.6V.
+
+
+==== DAILY STATISTICS ====================
+[2014-08-14] - 22h:06m recorded activity (92.1%)
+      Total active power: 1.06kWh  | Average: 0.06kW  | Maximum: 1.26kW on [2014-08-14 07:49]
+    Total apparent power: 1.19kVAh | Average: 0.06kVA | Maximum: 1.34kVA on [2014-08-14 07:49]
+    Voltage: Average: 217.5V | Minimum: 196.1V on [2014-08-14 23:43] | Maximum: 225.5V on [2014-08-14 05:58]
+
+[2014-08-15] - 15h:29m recorded activity (64.5%)
+      Total active power: 1.10kWh  | Average: 0.07kW  | Maximum: 1.11kW on [2014-08-15 07:45]
+    Total apparent power: 1.21kVAh | Average: 0.08kVA | Maximum: 1.18kVA on [2014-08-15 07:45]
+    Voltage: Average: 210.9V | Minimum: 202.1V on [2014-08-15 07:43] | Maximum: 216.3V on [2014-08-15 00:50]
+
+[2014-09-11] - 05h:17m recorded activity (22.0%)
+      Total active power: 0.34kWh  | Average: 0.06kW  | Maximum: 0.12kW on [2014-09-11 21:39]
+    Total apparent power: 0.38kVAh | Average: 0.07kVA | Maximum: 0.13kVA on [2014-09-11 21:39]
+    Voltage: Average: 218.4V | Minimum: 211.0V on [2014-09-11 21:07] | Maximum: 226.1V on [2014-09-11 19:05]
+
+[2014-09-12] - 01d:00h:00m recorded activity (100.0%)
+      Total active power: 1.66kWh  | Average: 0.07kW  | Maximum: 1.31kW on [2014-09-12 08:15]
+    Total apparent power: 1.85kVAh | Average: 0.08kVA | Maximum: 1.41kVA on [2014-09-12 08:15]
+    Voltage: Average: 219.2V | Minimum: 210.5V on [2014-09-12 20:47] | Maximum: 226.1V on [2014-09-12 16:05]
+
+
+==== BLACKOUT HISTORY ====================
+12 blackout(s) for a total of 27d:07h:02m.
+
+[2014-08-14 07:03] Duration: 01m
+[2014-08-14 17:19] Duration: 01m
+[2014-08-14 19:03] Duration: 03h:35m
+[2014-08-14 22:54] Duration: 01m
+[2014-08-14 23:13] Duration: 02m
+[2014-08-14 23:18] Duration: 03m
+[2014-08-14 23:28] Duration: 01m
+[2014-08-15 00:49] Duration: 01m
+[2014-08-15 10:22] Duration: 01m
+[2014-08-15 10:33] Duration: 01m
+[2014-08-15 12:17] Duration: 01m
+[2014-08-15 15:29] Duration: 27d:03h:14m
