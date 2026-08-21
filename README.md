@@ -12,7 +12,7 @@ parsing.
 ## Build
 
 ```bash
-go build -o energylogger ./cmd/...
+go build ./cmd/energylogger
 ```
 
 ## Usage
@@ -198,7 +198,7 @@ real device captures in `testdata/` and compares all three outputs against
 review the diff:
 
 ```bash
-go test -run TestRunGolden ./cmd/ -update
+go test -run TestRunGolden ./cmd/energylogger -update
 ```
 
 Extremum tie-breaking follows the original deliberately — the last of several

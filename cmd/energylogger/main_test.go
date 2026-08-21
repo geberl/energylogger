@@ -17,9 +17,9 @@ import (
 // review the diff.
 var updateGolden = flag.Bool("update", false, "rewrite the golden files in testdata/golden")
 
-// testdataDir is the repository-wide testdata folder, one level above this
+// testdataDir is the repository-wide testdata folder, two levels above this
 // package.
-var testdataDir = filepath.Join("..", "testdata")
+var testdataDir = filepath.Join("..", "..", "testdata")
 
 var outputFiles = []string{historyTextFile, historyCSVFile, statsTextFile}
 
