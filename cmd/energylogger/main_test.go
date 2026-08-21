@@ -203,6 +203,27 @@ func TestRunSkipsDotfiles(t *testing.T) {
 	}
 }
 
+// TestRunReportsUnreadableFile covers the read failure, whose message used to
+// discard the error and so read identically for a permissions problem and for a
+// file that had gone away.
+func TestRunReportsUnreadableFile(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root can read a mode 0000 file")
+	}
+	inDir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(inDir, "A04FC8D2.BIN"), []byte("whatever"), 0o000); err != nil {
+		t.Fatal(err)
+	}
+
+	var sb strings.Builder
+	if code := run([]string{"-input", inDir, "-output", t.TempDir()}, &sb); code != 0 {
+		t.Errorf("exit code = %d, want 0", code)
+	}
+	if !strings.Contains(sb.String(), "Failed to open: ") {
+		t.Errorf("expected the underlying error alongside the message, got:\n%s", sb.String())
+	}
+}
+
 func TestRunEmptyInputFolder(t *testing.T) {
 	var sb strings.Builder
 	if code := run([]string{"-input", t.TempDir(), "-output", t.TempDir()}, &sb); code != 0 {

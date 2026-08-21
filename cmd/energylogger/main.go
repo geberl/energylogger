@@ -123,7 +123,9 @@ func run(args []string, stdout io.Writer) int {
 		log.stepf("Processing file: %s...", file)
 		raw, err := os.ReadFile(file)
 		if err != nil {
-			log.done(col.red("Failed to open"))
+			// Include the error, as the parse failure below does: a permissions
+			// problem otherwise reads exactly like a file that went away.
+			log.done(col.red("Failed to open") + ": " + err.Error())
 			continue
 		}
 		parsed, err := voltcraft.ParseBytes(raw)
