@@ -15,6 +15,7 @@ import (
 	"path/filepath"
 	"slices"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/peterbourgon/ff/v3"
@@ -196,9 +197,9 @@ func run(args []string, stdout io.Writer) int {
 	return exitCode
 }
 
-// inputFiles lists the candidate data files in dir, skipping subdirectories and
-// the tool's own output files so that a second run over the same folder does not
-// try to parse them.
+// inputFiles lists the candidate data files in dir, skipping subdirectories,
+// dotfiles, and the tool's own output files so that a second run over the same
+// folder does not try to parse them.
 func inputFiles(dir string, targets map[string]string) ([]string, error) {
 	matches, err := filepath.Glob(filepath.Join(dir, "*"))
 	if err != nil {
@@ -213,6 +214,12 @@ func inputFiles(dir string, targets map[string]string) ([]string, error) {
 
 	var files []string
 	for _, match := range matches {
+		// filepath.Match has no shell-style dotfile exemption, so "*" picks up
+		// .DS_Store and friends. They are never data files, and reporting them
+		// as Invalid looks like a malfunction.
+		if strings.HasPrefix(filepath.Base(match), ".") {
+			continue
+		}
 		info, err := os.Stat(match)
 		if err != nil || info.IsDir() {
 			continue

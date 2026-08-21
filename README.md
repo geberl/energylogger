@@ -46,8 +46,9 @@ energylogger
 
 Every file in the input folder is tried; anything that is not a Voltcraft data
 file is reported as `Invalid` and skipped, including the small `INFO:` metadata
-file the device also writes. Samples from all files are merged, sorted and
-deduplicated by timestamp, so dumping the same SD card twice is harmless.
+file the device also writes. Subdirectories and dotfiles such as `.DS_Store` are
+passed over silently. Samples from all files are merged, sorted and deduplicated
+by timestamp, so dumping the same SD card twice is harmless.
 
 Deduplication keeps the first sample of each timestamp and reports how many it
 dropped. If any of the dropped samples carried *different* readings from the one

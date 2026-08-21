@@ -175,6 +175,33 @@ func TestRunNoValidFiles(t *testing.T) {
 	}
 }
 
+// TestRunSkipsDotfiles covers the entries filepath.Match's "*" picks up but a
+// shell's would not. Reporting a .DS_Store as Invalid looked like a malfunction.
+func TestRunSkipsDotfiles(t *testing.T) {
+	inDir := t.TempDir()
+	capture, err := os.ReadFile(filepath.Join(testdataDir, "A04FC8D2.BIN"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inDir, "A04FC8D2.BIN"), capture, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(inDir, ".DS_Store"), []byte("junk"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var sb strings.Builder
+	if code := run([]string{"-input", inDir, "-output", t.TempDir()}, &sb); code != 0 {
+		t.Fatalf("exit code = %d, want 0", code)
+	}
+	if strings.Contains(sb.String(), ".DS_Store") {
+		t.Errorf("the dotfile was not skipped:\n%s", sb.String())
+	}
+	if strings.Contains(sb.String(), "Invalid") {
+		t.Errorf("nothing should have been reported invalid:\n%s", sb.String())
+	}
+}
+
 func TestRunEmptyInputFolder(t *testing.T) {
 	var sb strings.Builder
 	if code := run([]string{"-input", t.TempDir(), "-output", t.TempDir()}, &sb); code != 0 {
