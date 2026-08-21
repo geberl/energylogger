@@ -5,7 +5,9 @@ Command-line analyzer for the **Voltcraft Energy-Logger 4000**. It decodes the
 parameter history plus daily, overall and blackout statistics.
 
 Go port of [vbocan/voltcraft-energy-analyzer](https://github.com/vbocan/voltcraft-energy-analyzer)
-by Valer Bocan. Standard library only — no third-party dependencies.
+by Valer Bocan. The only dependency is
+[peterbourgon/ff](https://github.com/peterbourgon/ff) for flag and environment
+parsing.
 
 ## Build
 
@@ -16,24 +18,30 @@ go build -o energylogger ./cmd/...
 ## Usage
 
 ```
-energylogger [flags] [<input folder>] [<output folder>]
+energylogger [flags]
 ```
 
-Both folders default to the current directory and may be given either
-positionally or by flag. An explicit flag wins over a positional argument.
+Both folders default to the current directory.
 
-| Flag | Meaning |
-|---|---|
-| `-input <dir>` | directory to read Voltcraft `.BIN` files from |
-| `-output <dir>` | directory to write the output files to (created if missing) |
-| `-quiet` | suppress the banner and per-file progress output |
-| `-no-color` | disable ANSI colour (also honours `NO_COLOR` and a non-terminal stdout) |
-| `-h`, `--help`, `/?` | show help |
+| Flag | Environment variable | Meaning |
+|---|---|---|
+| `-input <dir>` | `ENERGYLOGGER_INPUT` | directory to read Voltcraft `.BIN` files from |
+| `-output <dir>` | `ENERGYLOGGER_OUTPUT` | directory to write the output files to (created if missing) |
+| `-quiet` | `ENERGYLOGGER_QUIET` | suppress the banner and per-file progress output |
+| `-no-color` | `ENERGYLOGGER_NO_COLOR` | disable ANSI colour (also honours `NO_COLOR` and a non-terminal stdout) |
+| `-h`, `--help`, `/?` | — | show help |
+
+Every setting can come from either source, in this order of precedence: a flag on
+the command line, then the environment variable, then the default.
 
 ```bash
-energylogger /Volumes/SDCARD ~/energy   # read the SD card, write to ~/energy
-energylogger /Volumes/SDCARD            # write to the current directory
-energylogger                            # read and write in the current directory
+energylogger -input /Volumes/SDCARD -output ~/energy   # read the SD card, write to ~/energy
+energylogger -input /Volumes/SDCARD                    # write to the current directory
+energylogger                                           # read and write in the current directory
+
+export ENERGYLOGGER_INPUT=/Volumes/SDCARD              # or keep the folders in the
+export ENERGYLOGGER_OUTPUT=~/energy                    # environment, e.g. in .envrc
+energylogger
 ```
 
 Every file in the input folder is tried; anything that is not a Voltcraft data
@@ -47,7 +55,7 @@ kept, that is not a re-dump and a real measurement was lost, so the tool warns
 about it — see [Timestamps](#timestamps).
 
 Exit code is 0 on success, 1 if the output folder is unusable or a file could not
-be written, and 2 for a bad command line.
+be written, and 2 for a bad flag or environment variable.
 
 ### Output files
 

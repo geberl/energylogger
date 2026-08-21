@@ -17,8 +17,15 @@ import (
 	"sort"
 	"time"
 
+	"github.com/peterbourgon/ff/v3"
+
 	"energylogger/internal/export"
 	"energylogger/internal/voltcraft"
+)
+
+const (
+	applicationName = "energylogger"
+	envVarPrefix    = "ENERGYLOGGER"
 )
 
 // Names of the files written into the output directory.
@@ -44,38 +51,34 @@ func run(args []string, stdout io.Writer) int {
 		return 0
 	}
 
-	fs := flag.NewFlagSet("energylogger", flag.ContinueOnError)
+	fs := flag.NewFlagSet(applicationName, flag.ContinueOnError)
 	fs.SetOutput(stdout)
-	fs.Usage = func() { usage(stdout) }
+	// reported tells a bad flag, which flag itself complains about, from a bad
+	// environment variable, which only ff notices.
+	var reported bool
+	fs.Usage = func() { reported = true; usage(stdout) }
 	var (
 		inputDir  = fs.String("input", ".", "directory to read Voltcraft .BIN files from")
 		outputDir = fs.String("output", ".", "directory to write the history and statistics files to")
 		quiet     = fs.Bool("quiet", false, "suppress the banner and per-file progress output")
 		noColor   = fs.Bool("no-color", false, "disable ANSI colour in progress output")
 	)
-	if err := fs.Parse(args); err != nil {
-		// flag has already reported the problem and printed the usage.
+	if err := ff.Parse(fs, args, ff.WithEnvVarPrefix(envVarPrefix)); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return 0
+		}
+		if !reported {
+			_, _ = fmt.Fprintf(stdout, "%v\n", err)
+			usage(stdout)
 		}
 		return 2
 	}
 
-	// Positional arguments stay supported for compatibility with the original
-	// tool, but an explicit flag wins.
-	explicit := map[string]bool{}
-	fs.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
-	positional := fs.Args()
-	if len(positional) > 2 {
-		_, _ = fmt.Fprintf(stdout, "Too many arguments: expected at most <input folder> <output folder>.\n")
+	if fs.NArg() > 0 {
+		_, _ = fmt.Fprintf(stdout,
+			"Unexpected argument %q: give the folders with -input and -output.\n", fs.Arg(0))
 		usage(stdout)
 		return 2
-	}
-	if len(positional) > 0 && !explicit["input"] {
-		*inputDir = positional[0]
-	}
-	if len(positional) > 1 && !explicit["output"] {
-		*outputDir = positional[1]
 	}
 
 	col := palette{enabled: colorEnabled(*noColor, stdout)}
@@ -279,7 +282,7 @@ func sameReadings(a, b voltcraft.PowerEvent) bool {
 
 func usage(w io.Writer) {
 	_, _ = fmt.Fprint(w, `
-Usage: energylogger [flags] [<input folder>] [<output folder>]
+Usage: energylogger [flags]
 
 Decodes every Voltcraft Energy-Logger 4000 data file in the input folder and
 writes these files into the output folder:
@@ -288,8 +291,7 @@ writes these files into the output folder:
   `+historyCSVFile+`    the same history as CSV, at full precision
   `+statsTextFile+`      overall, daily and blackout statistics
 
-Both folders default to the current directory. The folders may be given either
-positionally or with the flags below.
+Both folders default to the current directory.
 
 Flags:
   -input string     directory to read Voltcraft .BIN files from (default ".")
@@ -298,10 +300,16 @@ Flags:
   -no-color         disable ANSI colour in progress output
   -h, --help, /?    show this help
 
+Every flag can also be given as an environment variable, which a flag on the
+command line overrides:
+
+  ENERGYLOGGER_INPUT, ENERGYLOGGER_OUTPUT, ENERGYLOGGER_QUIET,
+  ENERGYLOGGER_NO_COLOR
+
 Examples:
-  energylogger /Volumes/SDCARD ~/energy      read from the SD card, write to ~/energy
-  energylogger /Volumes/SDCARD               write to the current directory
-  energylogger                               read and write in the current directory
+  energylogger -input /Volumes/SDCARD -output ~/energy   read the SD card, write to ~/energy
+  energylogger -input /Volumes/SDCARD                    write to the current directory
+  energylogger                                           read and write in the current directory
 `)
 }
 

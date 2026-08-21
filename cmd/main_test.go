@@ -76,10 +76,20 @@ func itoa(n int) string {
 	return string(digits)
 }
 
-func TestRunPositionalArguments(t *testing.T) {
+// TestRunEnvironmentVariables checks that every folder and switch can be given
+// through the environment instead of on the command line.
+func TestRunEnvironmentVariables(t *testing.T) {
 	outDir := t.TempDir()
-	if code := run([]string{"-quiet", testdataDir, outDir}, io.Discard); code != 0 {
+	t.Setenv("ENERGYLOGGER_INPUT", testdataDir)
+	t.Setenv("ENERGYLOGGER_OUTPUT", outDir)
+	t.Setenv("ENERGYLOGGER_QUIET", "true")
+
+	var sb strings.Builder
+	if code := run(nil, &sb); code != 0 {
 		t.Fatalf("run exited with code %d, want 0", code)
+	}
+	if sb.String() != "" {
+		t.Errorf("ENERGYLOGGER_QUIET did not silence the output:\n%s", sb.String())
 	}
 	for _, name := range outputFiles {
 		if _, err := os.Stat(filepath.Join(outDir, name)); err != nil {
@@ -88,27 +98,44 @@ func TestRunPositionalArguments(t *testing.T) {
 	}
 }
 
-func TestRunFlagsWinOverPositionalArguments(t *testing.T) {
+func TestRunFlagsWinOverEnvironmentVariables(t *testing.T) {
 	outDir := t.TempDir()
-	code := run([]string{"-quiet", "-output", outDir, testdataDir, filepath.Join(outDir, "ignored")}, io.Discard)
-	if code != 0 {
+	ignored := filepath.Join(outDir, "ignored")
+	t.Setenv("ENERGYLOGGER_INPUT", testdataDir)
+	t.Setenv("ENERGYLOGGER_OUTPUT", ignored)
+
+	if code := run([]string{"-quiet", "-output", outDir}, io.Discard); code != 0 {
 		t.Fatalf("run exited with code %d, want 0", code)
 	}
 	if _, err := os.Stat(filepath.Join(outDir, statsTextFile)); err != nil {
 		t.Errorf("output was not written to the folder given by -output: %v", err)
 	}
-	if _, err := os.Stat(filepath.Join(outDir, "ignored")); err == nil {
-		t.Error("the positional output folder should have been ignored")
+	if _, err := os.Stat(ignored); err == nil {
+		t.Error("the folder from ENERGYLOGGER_OUTPUT should have been ignored")
 	}
 }
 
-func TestRunTooManyArguments(t *testing.T) {
+// TestRunBadEnvironmentVariable covers the one parse failure that flag itself
+// stays quiet about, so that the tool has to report it.
+func TestRunBadEnvironmentVariable(t *testing.T) {
+	t.Setenv("ENERGYLOGGER_QUIET", "notabool")
+
 	var sb strings.Builder
-	if code := run([]string{"a", "b", "c"}, &sb); code != 2 {
+	if code := run(nil, &sb); code != 2 {
 		t.Errorf("exit code = %d, want 2", code)
 	}
-	if !strings.Contains(sb.String(), "Too many arguments") {
-		t.Errorf("expected a complaint about the argument count, got:\n%s", sb.String())
+	if !strings.Contains(sb.String(), "ENERGYLOGGER_QUIET") {
+		t.Errorf("expected the offending environment variable to be named, got:\n%s", sb.String())
+	}
+}
+
+func TestRunUnexpectedArgument(t *testing.T) {
+	var sb strings.Builder
+	if code := run([]string{testdataDir}, &sb); code != 2 {
+		t.Errorf("exit code = %d, want 2", code)
+	}
+	if !strings.Contains(sb.String(), "Unexpected argument") {
+		t.Errorf("expected a complaint about the stray argument, got:\n%s", sb.String())
 	}
 }
 
