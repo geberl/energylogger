@@ -14,7 +14,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"sort"
 	"strings"
 	"time"
 
@@ -83,11 +82,11 @@ func run(args []string, stdout io.Writer) int {
 	}
 
 	col := palette{enabled: colorEnabled(*noColor, stdout)}
-	log := &progress{w: stdout, quiet: *quiet}
+	out := &progress{w: stdout, quiet: *quiet}
 
-	log.line(banner)
+	out.line(banner)
 
-	log.linef("Reading data files from folder '%s'.", col.brightWhite(*inputDir))
+	out.linef("Reading data files from folder '%s'.", col.brightWhite(*inputDir))
 
 	started := time.Now()
 
@@ -108,7 +107,7 @@ func run(args []string, stdout io.Writer) int {
 		return 1
 	}
 
-	log.linef("Writing statistics to folder '%s'.", col.brightWhite(*outputDir))
+	out.linef("Writing statistics to folder '%s'.", col.brightWhite(*outputDir))
 
 	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
 		_, _ = fmt.Fprintf(stdout, "%s %s: %v\n", col.red("Failed to create folder"), *outputDir, err)
@@ -120,12 +119,12 @@ func run(args []string, stdout io.Writer) int {
 		fileCount int
 	)
 	for _, file := range files {
-		log.stepf("Processing file: %s...", file)
+		out.stepf("Processing file: %s...", file)
 		raw, err := os.ReadFile(file)
 		if err != nil {
 			// Include the error, as the parse failure below does: a permissions
 			// problem otherwise reads exactly like a file that went away.
-			log.done(col.red("Failed to open") + ": " + err.Error())
+			out.done(col.red("Failed to open") + ": " + err.Error())
 			continue
 		}
 		parsed, err := voltcraft.ParseBytes(raw)
@@ -133,57 +132,57 @@ func run(args []string, stdout io.Writer) int {
 			// Only the "not a Voltcraft file" case is routine; anything else
 			// says something about the file worth showing.
 			if errors.Is(err, voltcraft.ErrNotVoltcraftFile) {
-				log.done(col.red("Invalid"))
+				out.done(col.red("Invalid"))
 			} else {
-				log.done(col.red("Invalid") + ": " + err.Error())
+				out.done(col.red("Invalid") + ": " + err.Error())
 			}
 			continue
 		}
 		events = append(events, parsed...)
 		fileCount++
-		log.done(col.green("Ok"))
+		out.done(col.green("Ok"))
 	}
 
 	if len(events) == 0 {
-		log.line(col.yellow("No valid Voltcraft data files found."))
-		log.line(col.green("Finished."))
+		out.line(col.yellow("No valid Voltcraft data files found."))
+		out.line(col.green("Finished."))
 		return 0
 	}
 
 	// Blackout detection and daily grouping both need the samples in
 	// chronological order, merged across all input files.
-	log.stepf("Sorting power data...")
+	out.stepf("Sorting power data...")
 	sortByTimestamp(events)
-	log.done(col.green("Done"))
+	out.done(col.green("Done"))
 
 	// The same data dumped to the SD card twice yields duplicate samples.
-	log.stepf("Removing duplicates from power data...")
+	out.stepf("Removing duplicates from power data...")
 	events, duplicates := dedupeByTimestamp(events)
 	if duplicates.Dropped == 0 {
-		log.done(col.green("Done"))
+		out.done(col.green("Done"))
 	} else {
-		log.done(col.green("Done") + fmt.Sprintf(" (dropped %d duplicate samples)", duplicates.Dropped))
+		out.done(col.green("Done") + fmt.Sprintf(" (dropped %d duplicate samples)", duplicates.Dropped))
 	}
 	// A duplicate timestamp whose readings disagree is not a re-dump of data
 	// already held: one of the two measurements is gone from every total below.
 	if duplicates.Conflicting > 0 {
-		log.line(col.yellow(fmt.Sprintf(
+		out.line(col.yellow(fmt.Sprintf(
 			"Warning: %d of them carried different readings and were discarded anyway.",
 			duplicates.Conflicting)))
-		log.line(col.yellow(
+		out.line(col.yellow(
 			"  This happens when cards from two devices share an input folder, or when the " +
 				"device clock was wound back; the statistics below are missing those samples."))
 	}
 
 	exitCode := 0
 	writeStep := func(name string, write func() error) {
-		log.stepf("Saving %s...", col.brightWhite(name))
+		out.stepf("Saving %s...", col.brightWhite(name))
 		if err := write(); err != nil {
-			log.done(col.red("Failed") + ": " + err.Error())
+			out.done(col.red("Failed") + ": " + err.Error())
 			exitCode = 1
 			return
 		}
-		log.done(col.green("Ok"))
+		out.done(col.green("Ok"))
 	}
 
 	writeStep(historyTextFile, func() error {
@@ -199,10 +198,10 @@ func run(args []string, stdout io.Writer) int {
 			stats.Overall(), stats.Daily(), stats.Blackouts())
 	})
 
-	if fileCount > 0 {
-		log.linef("Processed %d files in %s.", fileCount, time.Since(started).Round(time.Millisecond))
-	}
-	log.line(col.green("Finished."))
+	// At least one file parsed, or the len(events) == 0 return above would have
+	// been taken.
+	out.linef("Processed %d files in %s.", fileCount, time.Since(started).Round(time.Millisecond))
+	out.line(col.green("Finished."))
 	return exitCode
 }
 
@@ -270,8 +269,8 @@ func inputFiles(dir string, targets map[string]string) ([]string, error) {
 // sortByTimestamp orders the samples chronologically, keeping samples that
 // share a timestamp in the order their files were read.
 func sortByTimestamp(events []voltcraft.PowerEvent) {
-	sort.SliceStable(events, func(i, j int) bool {
-		return events[i].Timestamp.Before(events[j].Timestamp)
+	slices.SortStableFunc(events, func(a, b voltcraft.PowerEvent) int {
+		return a.Timestamp.Compare(b.Timestamp)
 	})
 }
 

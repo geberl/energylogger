@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -60,21 +61,10 @@ func firstDifference(want, got string) string {
 	wantLines, gotLines := strings.Split(want, "\n"), strings.Split(got, "\n")
 	for i := 0; i < len(wantLines) && i < len(gotLines); i++ {
 		if wantLines[i] != gotLines[i] {
-			return "line " + itoa(i+1) + ":\n want: " + wantLines[i] + "\n  got: " + gotLines[i]
+			return "line " + strconv.Itoa(i+1) + ":\n want: " + wantLines[i] + "\n  got: " + gotLines[i]
 		}
 	}
-	return "line counts differ: want " + itoa(len(wantLines)) + ", got " + itoa(len(gotLines))
-}
-
-func itoa(n int) string {
-	if n == 0 {
-		return "0"
-	}
-	var digits []byte
-	for ; n > 0; n /= 10 {
-		digits = append([]byte{byte('0' + n%10)}, digits...)
-	}
-	return string(digits)
+	return "line counts differ: want " + strconv.Itoa(len(wantLines)) + ", got " + strconv.Itoa(len(gotLines))
 }
 
 // TestRunEnvironmentVariables checks that every folder and switch can be given
@@ -126,6 +116,18 @@ func TestRunBadEnvironmentVariable(t *testing.T) {
 		t.Errorf("exit code = %d, want 2", code)
 	}
 	if !strings.Contains(sb.String(), "ENERGYLOGGER_QUIET") {
+		t.Errorf("expected the offending environment variable to be named, got:\n%s", sb.String())
+	}
+}
+
+func TestRunBadNoColorEnvironmentVariable(t *testing.T) {
+	t.Setenv("ENERGYLOGGER_NO_COLOR", "notabool")
+
+	var sb strings.Builder
+	if code := run(nil, &sb); code != 2 {
+		t.Errorf("exit code = %d, want 2", code)
+	}
+	if !strings.Contains(sb.String(), "ENERGYLOGGER_NO_COLOR") {
 		t.Errorf("expected the offending environment variable to be named, got:\n%s", sb.String())
 	}
 }
