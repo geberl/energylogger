@@ -31,7 +31,7 @@ type Blackout struct {
 
 // DailyInfo holds one calendar day's statistics.
 type DailyInfo struct {
-	Date  time.Time // midnight UTC of the day
+	Date  time.Time // midnight of the day on the device's own clock
 	Stats PowerStats
 }
 
@@ -188,7 +188,9 @@ func computeStats(events []PowerEvent) PowerStats {
 	}
 }
 
-// startOfDay returns midnight of the day the timestamp falls in.
+// startOfDay returns midnight of the day the timestamp falls in. The day is
+// re-derived in the timestamp's own location rather than a hardcoded one, so
+// grouping follows the clock the samples were recorded against.
 func startOfDay(ts time.Time) time.Time {
 	return time.Date(ts.Year(), ts.Month(), ts.Day(), 0, 0, 0, 0, ts.Location())
 }

@@ -86,7 +86,7 @@ func TestWriteHistoryCSV(t *testing.T) {
 	if len(lines) != 3 {
 		t.Fatalf("got %d lines, want 3", len(lines))
 	}
-	wantHeader := "Timestamp,Voltage (V),Current (A),cosPHI,Active Power (kW),Apparent Power (kVA)"
+	wantHeader := "Timestamp (device local time),Voltage (V),Current (A),cosPHI,Active Power (kW),Apparent Power (kVA)"
 	if lines[0] != wantHeader {
 		t.Errorf("header = %q, want %q", lines[0], wantHeader)
 	}

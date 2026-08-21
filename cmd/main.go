@@ -146,8 +146,22 @@ func run(args []string, stdout io.Writer) int {
 
 	// The same data dumped to the SD card twice yields duplicate samples.
 	log.stepf("Removing duplicates from power data...")
-	events = dedupeByTimestamp(events)
-	log.done(col.green("Done"))
+	events, duplicates := dedupeByTimestamp(events)
+	if duplicates.Dropped == 0 {
+		log.done(col.green("Done"))
+	} else {
+		log.done(col.green("Done") + fmt.Sprintf(" (dropped %d duplicate samples)", duplicates.Dropped))
+	}
+	// A duplicate timestamp whose readings disagree is not a re-dump of data
+	// already held: one of the two measurements is gone from every total below.
+	if duplicates.Conflicting > 0 {
+		log.line(col.yellow(fmt.Sprintf(
+			"Warning: %d of them carried different readings and were discarded anyway.",
+			duplicates.Conflicting)))
+		log.line(col.yellow(
+			"  This happens when cards from two devices share an input folder, or when the " +
+				"device clock was wound back; the statistics below are missing those samples."))
+	}
 
 	exitCode := 0
 	writeStep := func(name string, write func() error) {
@@ -217,20 +231,51 @@ func sortByTimestamp(events []voltcraft.PowerEvent) {
 	})
 }
 
+// dedupeStats counts what dedupeByTimestamp discarded.
+type dedupeStats struct {
+	// Dropped is the number of samples removed.
+	Dropped int
+
+	// Conflicting is the subset of those whose readings differed from the
+	// sample kept in their place, so a real measurement was lost rather than a
+	// copy of one already held.
+	Conflicting int
+}
+
 // dedupeByTimestamp drops samples that repeat the timestamp of the one before,
 // keeping the first of each run. The events must already be sorted.
-func dedupeByTimestamp(events []voltcraft.PowerEvent) []voltcraft.PowerEvent {
+//
+// Repeats are expected: dumping the same SD card twice yields the whole data
+// set again. Those copies are identical and dropping them is free. A repeat
+// carrying different readings is another matter — it means two devices' cards
+// were mixed into one input folder, or the device clock was wound back an hour
+// — so it is counted separately for the caller to report.
+func dedupeByTimestamp(events []voltcraft.PowerEvent) ([]voltcraft.PowerEvent, dedupeStats) {
+	var stats dedupeStats
 	if len(events) == 0 {
-		return events
+		return events, stats
 	}
 	kept := events[:1]
 	for _, e := range events[1:] {
-		if e.Timestamp.Equal(kept[len(kept)-1].Timestamp) {
+		previous := kept[len(kept)-1]
+		if e.Timestamp.Equal(previous.Timestamp) {
+			stats.Dropped++
+			if !sameReadings(e, previous) {
+				stats.Conflicting++
+			}
 			continue
 		}
 		kept = append(kept, e)
 	}
-	return kept
+	return kept, stats
+}
+
+// sameReadings reports whether two samples measured the same thing. Only the
+// three decoded fields are compared; active and apparent power are derived from
+// them. The values come from integers divided by a fixed constant, so they
+// compare exactly.
+func sameReadings(a, b voltcraft.PowerEvent) bool {
+	return a.Voltage == b.Voltage && a.Current == b.Current && a.PowerFactor == b.PowerFactor
 }
 
 func usage(w io.Writer) {

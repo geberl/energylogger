@@ -52,8 +52,8 @@ func TestParseBytesDecodesSample(t *testing.T) {
 	}
 	got := events[0]
 
-	// Unlike the Rust test this asserts an absolute instant, so it does not
-	// depend on the machine's timezone.
+	// Unlike the Rust test this asserts the recorded wall-clock digits in their
+	// fixed storage location, so it does not depend on the machine's timezone.
 	want := time.Date(2014, time.September, 11, 18, 43, 0, 0, time.UTC)
 	if !got.Timestamp.Equal(want) {
 		t.Errorf("timestamp = %s, want %s", got.Timestamp, want)

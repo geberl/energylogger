@@ -62,7 +62,10 @@ func WriteHistoryText(w io.Writer, events []voltcraft.PowerEvent) error {
 func WriteHistoryCSV(w io.Writer, events []voltcraft.PowerEvent) error {
 	cw := csv.NewWriter(w)
 
-	header := []string{"Timestamp", "Voltage (V)", "Current (A)", "cosPHI", "Active Power (kW)", "Apparent Power (kVA)"}
+	// The timestamp column is named after what it holds: the device's own clock
+	// reading, with no timezone to convert from. Spreadsheets and importers
+	// otherwise tend to reinterpret a bare "Timestamp" in the reader's zone.
+	header := []string{"Timestamp (device local time)", "Voltage (V)", "Current (A)", "cosPHI", "Active Power (kW)", "Apparent Power (kVA)"}
 	if err := cw.Write(header); err != nil {
 		return err
 	}

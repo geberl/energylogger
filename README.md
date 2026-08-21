@@ -41,6 +41,11 @@ file is reported as `Invalid` and skipped, including the small `INFO:` metadata
 file the device also writes. Samples from all files are merged, sorted and
 deduplicated by timestamp, so dumping the same SD card twice is harmless.
 
+Deduplication keeps the first sample of each timestamp and reports how many it
+dropped. If any of the dropped samples carried *different* readings from the one
+kept, that is not a re-dump and a real measurement was lost, so the tool warns
+about it — see [Timestamps](#timestamps).
+
 Exit code is 0 on success, 1 if the output folder is unusable or a file could not
 be written, and 2 for a bad command line.
 
@@ -68,6 +73,45 @@ Energy totals only count minutes that were actually recorded, so a day with a
 blackout reports the energy used while logging, not an extrapolation. The
 per-day "recorded activity" percentage spans the first to the last sample of the
 day and therefore includes any gaps in between.
+
+Two duration quirks are inherited from the Rust original and kept for
+comparability. The overall `Interval` length is the plain distance between the
+first and last sample, so it omits the final sample's own minute; per-day
+durations add that minute, which is why a fully recorded day reads
+`01d:00h:00m (100.0%)` while a month-long interval reads `29d:22h:05m`.
+`Average consumption` likewise divides gap-inclusive elapsed time into energy
+counted only over recorded minutes, so it under-reports on data with long
+blackouts.
+
+## Timestamps
+
+The device clock is set by hand and stores no timezone, so a recording carries
+nothing but the wall-clock digits the device displayed. Those digits are printed
+back verbatim, in `YYYY-MM-DD HH:MM` at one-minute resolution — the finest the
+format offers, since a block header has no seconds field.
+
+Internally the timestamps are held in `time.UTC`. That is a storage choice, not
+a claim that the readings are UTC: it keeps every duration, day boundary and
+blackout length free of the host's `TZ` and of DST jumps. Nothing converts them,
+and nothing should.
+
+The practical consequence is about the *device's* clock, not the machine running
+this tool. Leave the device clock alone and a DST changeover is invisible here.
+Adjust it mid-recording and:
+
+- **Spring forward** — the hour you skipped looks like a one-hour gap, so it is
+  reported as a blackout that never happened.
+- **Fall back** — the repeated hour produces duplicate timestamps. Dedup keeps
+  the first sample of each minute and discards the rest, so up to 60 real
+  samples and their energy drop out of the statistics. The tool warns when this
+  happens, since the discarded samples carried different readings.
+
+The same warning covers the other way duplicates arise: cards from two different
+devices sitting in one input folder.
+
+In the CSV the column is named `Timestamp (device local time)` rather than plain
+`Timestamp`, so importers are less likely to reinterpret it in the reader's own
+timezone.
 
 ## File format
 
@@ -99,9 +143,10 @@ carries no samples and is skipped.
 
 ## Differences from the Rust original
 
-The two history files are **byte-identical** to the Rust tool's output. In
+`voltcraft_history.txt` is **byte-identical** to the Rust tool's output.
+`voltcraft_history.csv` differs only in its header line (item 4 below), and in
 `voltcraft_stats.txt` the only differences are the apparent-power lines listed
-below.
+first.
 
 1. **Fixed:** the daily *Total apparent power* line printed the active-power
    figures (`src/export.rs:181-190` in the original), which is why every day's
@@ -110,19 +155,24 @@ below.
 2. **Fixed:** the overall *Peak power … kVA* line printed the active power of
    the peak-apparent-power sample (`src/export.rs:114`). This port prints its
    apparent power.
-3. **Timestamps are treated as UTC wall-clock time** rather than local time.
-   The device clock carries no timezone, so this simply prints back what was
-   recorded. The original binds each reading to the host timezone, which on a
-   DST fall-back day labels one hour twice: for the bundled `sample_data2` it
-   prints the 60 minutes of `2014-10-26 02:00`–`02:59` under two different
-   instants each. The same choice also means durations, daily grouping and
-   blackout lengths no longer depend on the machine's `TZ`.
-4. **No panics on damaged input.** A truncated file, a file with no end-of-data
+3. **Timestamps are timezone-naive** rather than bound to the host timezone, as
+   described under [Timestamps](#timestamps). The original attaches each reading
+   to the machine's zone, which on a DST fall-back day labels one hour twice:
+   for the bundled `sample_data2` it prints the 60 minutes of
+   `2014-10-26 02:00`–`02:59` under two different instants each, and its
+   durations, daily grouping and blackout lengths vary with `TZ`.
+4. The CSV timestamp column is named `Timestamp (device local time)` instead of
+   `Timestamp`, so spreadsheets are less likely to reinterpret a bare naive
+   timestamp in the reader's own zone. The values themselves are unchanged.
+5. **Duplicate timestamps are reported.** Dedup behaves as before, but the count
+   of dropped samples is printed, and dropped samples whose readings disagreed
+   with the one kept raise a warning instead of vanishing silently.
+6. **No panics on damaged input.** A truncated file, a file with no end-of-data
    marker, an impossible date, or an implausible mains voltage is reported as
    invalid and skipped; the original aborted the whole run.
-5. The tool's own output files are skipped when the input and output folders are
+7. The tool's own output files are skipped when the input and output folders are
    the same, so a second run in the same directory does not try to parse them.
-6. Per-day statistics are computed in a single pass instead of rescanning every
+8. Per-day statistics are computed in a single pass instead of rescanning every
    sample once per day.
 
 Not changed: the misspelling of "occured" in the statistics file is kept, so the

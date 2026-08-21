@@ -17,6 +17,15 @@
 // session of the device, so the magic number is tested at every record
 // position. Records carry no timestamp of their own: the n-th record of a
 // block is timestamped block start + n minutes.
+//
+// # Timestamps
+//
+// The device clock is set by hand and carries no timezone, so a header holds
+// nothing but the wall-clock digits the device displayed. Decoded timestamps
+// are therefore civil time, not instants: they are held in time.UTC purely so
+// that arithmetic and day grouping cannot depend on the host timezone, and are
+// formatted back verbatim. Do not convert them to another location — that
+// would shift the readings away from the clock the user actually saw.
 package voltcraft
 
 import (
@@ -68,12 +77,16 @@ const (
 // A PowerEvent is one sample: the electrical parameters the device recorded
 // during a single minute.
 type PowerEvent struct {
-	Timestamp     time.Time // start of the sampled minute, in UTC
-	Voltage       float64   // volts
-	Current       float64   // amperes
-	PowerFactor   float64   // cos(phi)
-	Power         float64   // active power, kW
-	ApparentPower float64   // apparent power, kVA
+	// Timestamp is the start of the sampled minute as the device's own clock
+	// read it: civil time with no timezone, held in time.UTC so that durations
+	// and day boundaries stay independent of the host timezone. See the package
+	// documentation; it must not be converted to another location.
+	Timestamp     time.Time
+	Voltage       float64 // volts
+	Current       float64 // amperes
+	PowerFactor   float64 // cos(phi)
+	Power         float64 // active power, kW
+	ApparentPower float64 // apparent power, kVA
 }
 
 // ParseFile reads and decodes a single Voltcraft data file.
@@ -147,6 +160,11 @@ func isEndOfData(raw []byte, off int) bool {
 // decodeTimestamp decodes a 5-byte block header timestamp. The fields are
 // plain binary (not BCD) and in month/day/year order; the year is an offset
 // from 2000 and seconds are always zero.
+//
+// time.UTC below is a storage location, not a claim about the reading: the
+// header carries the device's local wall clock and no offset, so the digits are
+// kept exactly as recorded. Using a fixed zone keeps every duration, day
+// boundary and blackout length free of the host timezone and its DST jumps.
 func decodeTimestamp(raw []byte, off int) (time.Time, error) {
 	if off+headerSize > len(raw) {
 		return time.Time{}, fmt.Errorf("%w: block header at offset %d", ErrTruncated, off)

@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"energylogger/internal/voltcraft"
 )
@@ -226,7 +227,7 @@ func TestDedupeByTimestamp(t *testing.T) {
 	// Feeding the same capture in twice must collapse back to one copy.
 	doubled := append(append([]voltcraft.PowerEvent{}, events...), events...)
 	sortByTimestamp(doubled)
-	deduped := dedupeByTimestamp(doubled)
+	deduped, stats := dedupeByTimestamp(doubled)
 	if len(deduped) != len(events) {
 		t.Errorf("got %d events after dedup, want %d", len(deduped), len(events))
 	}
@@ -234,5 +235,41 @@ func TestDedupeByTimestamp(t *testing.T) {
 		if !deduped[i].Timestamp.After(deduped[i-1].Timestamp) {
 			t.Fatalf("event %d is not strictly after its predecessor", i)
 		}
+	}
+	if stats.Dropped != len(events) {
+		t.Errorf("dropped = %d, want %d", stats.Dropped, len(events))
+	}
+	// Every copy matched the sample it duplicated, so nothing was really lost.
+	if stats.Conflicting != 0 {
+		t.Errorf("conflicting = %d, want 0", stats.Conflicting)
+	}
+}
+
+// TestDedupeByTimestampCountsConflicts covers the case a re-dump does not
+// explain: two samples claiming the same minute with different readings, as
+// produced by mixing two devices' cards or winding the device clock back.
+func TestDedupeByTimestampCountsConflicts(t *testing.T) {
+	base := time.Date(2014, time.September, 11, 18, 43, 0, 0, time.UTC)
+	events := []voltcraft.PowerEvent{
+		{Timestamp: base, Voltage: 230, Current: 1, PowerFactor: 0.9},
+		{Timestamp: base, Voltage: 230, Current: 1, PowerFactor: 0.9}, // a copy
+		{Timestamp: base, Voltage: 224, Current: 1, PowerFactor: 0.9}, // a conflict
+		{Timestamp: base.Add(time.Minute), Voltage: 230, Current: 1, PowerFactor: 0.9},
+	}
+
+	deduped, stats := dedupeByTimestamp(events)
+
+	if len(deduped) != 2 {
+		t.Errorf("got %d events after dedup, want 2", len(deduped))
+	}
+	if stats.Dropped != 2 {
+		t.Errorf("dropped = %d, want 2", stats.Dropped)
+	}
+	if stats.Conflicting != 1 {
+		t.Errorf("conflicting = %d, want 1", stats.Conflicting)
+	}
+	// The first of each run wins, so the kept sample is the original reading.
+	if deduped[0].Voltage != 230 {
+		t.Errorf("kept voltage = %v, want 230", deduped[0].Voltage)
 	}
 }
