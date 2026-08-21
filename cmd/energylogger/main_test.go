@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"energylogger/internal/voltcraft"
+	"github.com/geberl/energylogger/internal/voltcraft"
 )
 
 // updateGolden regenerates testdata/golden from the current output. Run

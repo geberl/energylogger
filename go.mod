@@ -1,4 +1,4 @@
-module energylogger
+module github.com/geberl/energylogger
 
 go 1.27
 

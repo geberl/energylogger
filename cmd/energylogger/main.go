@@ -19,8 +19,8 @@ import (
 
 	"github.com/peterbourgon/ff/v3"
 
-	"energylogger/internal/export"
-	"energylogger/internal/voltcraft"
+	"github.com/geberl/energylogger/internal/export"
+	"github.com/geberl/energylogger/internal/voltcraft"
 )
 
 const (

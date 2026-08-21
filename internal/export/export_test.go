@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"energylogger/internal/voltcraft"
+	"github.com/geberl/energylogger/internal/voltcraft"
 )
 
 var base = time.Date(2014, time.July, 20, 22, 4, 0, 0, time.UTC)

@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"energylogger/internal/voltcraft"
+	"github.com/geberl/energylogger/internal/voltcraft"
 )
 
 // Timestamp layouts used throughout the output files.
