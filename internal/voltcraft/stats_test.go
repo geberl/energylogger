@@ -193,7 +193,7 @@ func TestBlackoutsDetectsGaps(t *testing.T) {
 
 func TestBlackoutsNoneWhenContiguous(t *testing.T) {
 	var events []PowerEvent
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		events = append(events, event(i, 210, 1, 1))
 	}
 	if got := NewStatistics(events).Blackouts(); got.Count != 0 || got.TotalDuration != 0 {

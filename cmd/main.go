@@ -13,6 +13,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"slices"
 	"sort"
 	"time"
 
@@ -37,12 +38,10 @@ func main() {
 // run executes the tool and returns the process exit code.
 func run(args []string, stdout io.Writer) int {
 	// The original tool accepted /? as a help switch; flag does not know it.
-	for _, arg := range args {
-		if arg == "/?" {
-			fmt.Fprintln(stdout, banner)
-			usage(stdout)
-			return 0
-		}
+	if slices.Contains(args, "/?") {
+		_, _ = fmt.Fprintln(stdout, banner)
+		usage(stdout)
+		return 0
 	}
 
 	fs := flag.NewFlagSet("energylogger", flag.ContinueOnError)
