@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -184,12 +185,44 @@ func formatFloat(v float64) string {
 	return strconv.FormatFloat(v, 'f', -1, 64)
 }
 
-// writeFile creates path and hands a buffered writer to fn.
+// writeFile hands a buffered writer to fn and puts the result at path
+// atomically: it writes a temporary file and renames it over the target, so a
+// failure partway through leaves the previous file untouched.
+//
+// os.Create truncated in place instead, which meant a failed run left a
+// truncated file where a valid one had been. That corruption is silent, since a
+// short CSV still opens cleanly in a spreadsheet; and the tool writes a few
+// hundred kilobytes, sometimes onto the very card it just read, so a full disk
+// is a realistic way to get there.
+//
+// Deliberately no fsync: the failure being prevented is clobbering a good file,
+// not losing a new one to a machine crash.
 func writeFile(path string, fn func(io.Writer) error) error {
-	f, err := os.Create(path)
+	// The temp file has to share a filesystem with the target for os.Rename, so
+	// it goes in the target's own directory. The dot prefix keeps a leftover
+	// from a killed process out of the input list on the next run, for when
+	// that directory is also the input folder.
+	f, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".tmp")
 	if err != nil {
 		return err
 	}
+	tmp := f.Name()
+	renamed := false
+	defer func() {
+		if !renamed {
+			_ = os.Remove(tmp)
+		}
+	}()
+
+	// os.CreateTemp creates the file 0600, where os.Create gave 0666 & ^umask.
+	// Without this the output would silently become owner-only. Overwriting
+	// keeps whatever mode the target already had, so permissions a user
+	// tightened by hand survive the next run.
+	perm := os.FileMode(0o644)
+	if info, err := os.Stat(path); err == nil {
+		perm = info.Mode().Perm()
+	}
+
 	bw := bufio.NewWriter(f)
 	if err := fn(bw); err != nil {
 		_ = f.Close()
@@ -199,7 +232,20 @@ func writeFile(path string, fn func(io.Writer) error) error {
 		_ = f.Close()
 		return err
 	}
-	return f.Close()
+	if err := f.Chmod(perm); err != nil {
+		_ = f.Close()
+		return err
+	}
+	// Unlike the paths above, a Close error here is the only report that the
+	// data did not land, so it is returned rather than discarded.
+	if err := f.Close(); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	renamed = true
+	return nil
 }
 
 // errWriter collects the first write error so that long runs of formatted

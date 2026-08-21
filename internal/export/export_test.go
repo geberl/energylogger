@@ -1,6 +1,9 @@
 package export
 
 import (
+	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -236,6 +239,85 @@ func TestWriteFileHelpers(t *testing.T) {
 		if len(content) == 0 {
 			t.Errorf("%s is empty", name)
 		}
+	}
+}
+
+// TestWriteFileKeepsTheOldFileOnFailure is the whole point of renaming a temp
+// file into place. os.Create truncated the target up front, so a failure
+// partway through left a short file where a valid one had been -- and a
+// truncated CSV still opens cleanly in a spreadsheet, so nothing said so.
+func TestWriteFileKeepsTheOldFileOnFailure(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "history.csv")
+	const previous = "the previous, perfectly good output\n"
+	if err := os.WriteFile(path, []byte(previous), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	boom := errors.New("render failed halfway")
+	err := writeFile(path, func(w io.Writer) error {
+		// Write well past the bufio buffer first, so this is a failure that
+		// really did reach the disk.
+		if _, err := w.Write(bytes.Repeat([]byte("x"), 128*1024)); err != nil {
+			return err
+		}
+		return boom
+	})
+	if !errors.Is(err, boom) {
+		t.Fatalf("writeFile error = %v, want %v", err, boom)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the previous file is gone: %v", err)
+	}
+	if string(got) != previous {
+		t.Errorf("the previous file was damaged\n got: %q\nwant: %q", got, previous)
+	}
+
+	// A leftover temp file would be read as input on the next run.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 {
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		t.Errorf("temp file left behind: %v", names)
+	}
+}
+
+// TestWriteFilePermissions pins the mode down, since os.CreateTemp creates
+// files 0600 and the output would otherwise silently become owner-only.
+func TestWriteFilePermissions(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "history.txt")
+
+	if err := WriteHistoryTextFile(path, sampleEvents()); err != nil {
+		t.Fatal(err)
+	}
+	info, err := os.Stat(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o644 {
+		t.Errorf("mode of a new file = %04o, want 0644", perm)
+	}
+
+	// Permissions a user tightened by hand survive the next run.
+	if err := os.Chmod(path, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if err := WriteHistoryTextFile(path, sampleEvents()); err != nil {
+		t.Fatal(err)
+	}
+	if info, err = os.Stat(path); err != nil {
+		t.Fatal(err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("mode after overwriting a 0600 file = %04o, want 0600", perm)
 	}
 }
 
