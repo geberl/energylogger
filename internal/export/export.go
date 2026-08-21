@@ -192,11 +192,11 @@ func writeFile(path string, fn func(io.Writer) error) error {
 	}
 	bw := bufio.NewWriter(f)
 	if err := fn(bw); err != nil {
-		f.Close()
+		_ = f.Close()
 		return err
 	}
 	if err := bw.Flush(); err != nil {
-		f.Close()
+		_ = f.Close()
 		return err
 	}
 	return f.Close()

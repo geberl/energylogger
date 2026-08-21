@@ -67,7 +67,7 @@ func run(args []string, stdout io.Writer) int {
 	fs.Visit(func(f *flag.Flag) { explicit[f.Name] = true })
 	positional := fs.Args()
 	if len(positional) > 2 {
-		fmt.Fprintf(stdout, "Too many arguments: expected at most <input folder> <output folder>.\n")
+		_, _ = fmt.Fprintf(stdout, "Too many arguments: expected at most <input folder> <output folder>.\n")
 		usage(stdout)
 		return 2
 	}
@@ -84,7 +84,7 @@ func run(args []string, stdout io.Writer) int {
 	log.line(banner)
 
 	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
-		fmt.Fprintf(stdout, "%s %s: %v\n", col.red("Failed to create folder"), *outputDir, err)
+		_, _ = fmt.Fprintf(stdout, "%s %s: %v\n", col.red("Failed to create folder"), *outputDir, err)
 		return 1
 	}
 	log.linef("Reading data files from folder '%s'.", col.brightWhite(*inputDir))
@@ -100,7 +100,7 @@ func run(args []string, stdout io.Writer) int {
 
 	files, err := inputFiles(*inputDir, targets)
 	if err != nil {
-		fmt.Fprintf(stdout, "%s '%s': %v\n", col.red("Failed to read folder"), *inputDir, err)
+		_, _ = fmt.Fprintf(stdout, "%s '%s': %v\n", col.red("Failed to read folder"), *inputDir, err)
 		return 1
 	}
 
@@ -278,7 +278,7 @@ func sameReadings(a, b voltcraft.PowerEvent) bool {
 }
 
 func usage(w io.Writer) {
-	fmt.Fprint(w, `
+	_, _ = fmt.Fprint(w, `
 Usage: energylogger [flags] [<input folder>] [<output folder>]
 
 Decodes every Voltcraft Energy-Logger 4000 data file in the input folder and
@@ -316,7 +316,7 @@ func (p *progress) line(s string) {
 	if p.quiet {
 		return
 	}
-	fmt.Fprintln(p.w, s)
+	_, _ = fmt.Fprintln(p.w, s)
 }
 
 func (p *progress) linef(format string, a ...any) {
@@ -329,14 +329,14 @@ func (p *progress) stepf(format string, a ...any) {
 	if p.quiet {
 		return
 	}
-	fmt.Fprintf(p.w, format, a...)
+	_, _ = fmt.Fprintf(p.w, format, a...)
 }
 
 func (p *progress) done(status string) {
 	if p.quiet {
 		return
 	}
-	fmt.Fprintf(p.w, " %s\n", status)
+	_, _ = fmt.Fprintf(p.w, " %s\n", status)
 }
 
 // palette colours terminal output. With enabled false every method returns its
