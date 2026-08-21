@@ -1,4 +1,4 @@
-# energylogger
+# ![EnergyLogger-logo](assets/logo-small.png) energylogger
 
 Command-line analyzer for the **Voltcraft Energy-Logger 4000**. It decodes the
 `.BIN` files the device writes to its SD card and produces a minute-by-minute
