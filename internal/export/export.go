@@ -104,7 +104,7 @@ func WriteStatistics(w io.Writer, overall voltcraft.OverallInfo, daily []voltcra
 
 	out.printf("- ACTIVE POWER\n")
 	out.printf("Total energy consumption: %.2fkWh.\n", overall.Stats.TotalActivePower)
-	out.printf("Peak power was %.2fkW and occured on %s.\n",
+	out.printf("Peak power was %.2fkW and occurred on %s.\n",
 		overall.Stats.MaxActivePower.Power,
 		overall.Stats.MaxActivePower.Timestamp.Format(tsBracketed))
 	out.printf("Minute by minute average power: %.2fkW.\n", overall.Stats.AvgActivePower)
@@ -112,17 +112,17 @@ func WriteStatistics(w io.Writer, overall voltcraft.OverallInfo, daily []voltcra
 
 	out.printf("- APPARENT POWER\n")
 	out.printf("Total energy consumption: %.2fkVAh.\n", overall.Stats.TotalApparentPower)
-	out.printf("Peak power was %.2fkVA and occured on %s.\n",
+	out.printf("Peak power was %.2fkVA and occurred on %s.\n",
 		overall.Stats.MaxApparentPower.ApparentPower,
 		overall.Stats.MaxApparentPower.Timestamp.Format(tsBracketed))
 	out.printf("Minute by minute average power: %.2fkVA.\n", overall.Stats.AvgApparentPower)
 	out.printf("\n")
 
 	out.printf("- VOLTAGE\n")
-	out.printf("Minimum voltage was %.1fV and occured on %s.\n",
+	out.printf("Minimum voltage was %.1fV and occurred on %s.\n",
 		overall.Stats.MinVoltage.Voltage,
 		overall.Stats.MinVoltage.Timestamp.Format(tsBracketed))
-	out.printf("Maximum voltage was %.1fV and occured on %s.\n",
+	out.printf("Maximum voltage was %.1fV and occurred on %s.\n",
 		overall.Stats.MaxVoltage.Voltage,
 		overall.Stats.MaxVoltage.Timestamp.Format(tsBracketed))
 	out.printf("Minute by minute average voltage: %.1fV.\n", overall.Stats.AvgVoltage)

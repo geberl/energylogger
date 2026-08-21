@@ -4,17 +4,17 @@ Average consumption: 0.14kWh/day | Projected: 4.17kWh/month or 50.68kWh/year.
 
 - ACTIVE POWER
 Total energy consumption: 4.15kWh.
-Peak power was 1.31kW and occured on [2014-09-12 08:15].
+Peak power was 1.31kW and occurred on [2014-09-12 08:15].
 Minute by minute average power: 0.07kW.
 
 - APPARENT POWER
 Total energy consumption: 4.63kVAh.
-Peak power was 1.41kVA and occured on [2014-09-12 08:15].
+Peak power was 1.41kVA and occurred on [2014-09-12 08:15].
 Minute by minute average power: 0.07kVA.
 
 - VOLTAGE
-Minimum voltage was 196.1V and occured on [2014-08-14 23:43].
-Maximum voltage was 226.1V and occured on [2014-09-12 16:05].
+Minimum voltage was 196.1V and occurred on [2014-08-14 23:43].
+Maximum voltage was 226.1V and occurred on [2014-09-12 16:05].
 Minute by minute average voltage: 216.6V.
 
 

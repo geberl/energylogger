@@ -72,7 +72,7 @@ Average consumption: 1.53kWh/day | Projected: 46.03kWh/month or 559.98kWh/year.
 
 - ACTIVE POWER
 Total energy consumption: 82.97kWh.
-Peak power was 1.34kW and occured on [2014-08-26 07:52].
+Peak power was 1.34kW and occurred on [2014-08-26 07:52].
 Minute by minute average power: 0.06kW.
 ...
 ```
@@ -182,9 +182,6 @@ first.
    the same, so a second run in the same directory does not try to parse them.
 8. Per-day statistics are computed in a single pass instead of rescanning every
    sample once per day.
-
-Not changed: the misspelling of "occured" in the statistics file is kept, so the
-output still diffs cleanly against the original tool.
 
 ## Tests
 
