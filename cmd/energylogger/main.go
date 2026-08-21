@@ -87,12 +87,7 @@ func run(args []string, stdout io.Writer) int {
 
 	log.line(banner)
 
-	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
-		_, _ = fmt.Fprintf(stdout, "%s %s: %v\n", col.red("Failed to create folder"), *outputDir, err)
-		return 1
-	}
 	log.linef("Reading data files from folder '%s'.", col.brightWhite(*inputDir))
-	log.linef("Writing statistics to folder '%s'.", col.brightWhite(*outputDir))
 
 	started := time.Now()
 
@@ -102,9 +97,21 @@ func run(args []string, stdout io.Writer) int {
 		statsTextFile:   filepath.Join(*outputDir, statsTextFile),
 	}
 
+	// Read the input folder before creating the output folder, so that a typo'd
+	// -input does not leave an empty directory behind.
 	files, err := inputFiles(*inputDir, targets)
 	if err != nil {
 		_, _ = fmt.Fprintf(stdout, "%s '%s': %v\n", col.red("Failed to read folder"), *inputDir, err)
+		if errors.Is(err, os.ErrNotExist) {
+			_, _ = fmt.Fprintln(stdout, "  Check the path, and that the card is mounted.")
+		}
+		return 1
+	}
+
+	log.linef("Writing statistics to folder '%s'.", col.brightWhite(*outputDir))
+
+	if err := os.MkdirAll(*outputDir, 0o755); err != nil {
+		_, _ = fmt.Fprintf(stdout, "%s %s: %v\n", col.red("Failed to create folder"), *outputDir, err)
 		return 1
 	}
 
@@ -200,34 +207,60 @@ func run(args []string, stdout io.Writer) int {
 // inputFiles lists the candidate data files in dir, skipping subdirectories,
 // dotfiles, and the tool's own output files so that a second run over the same
 // folder does not try to parse them.
+//
+// A folder that is not there is an error rather than an empty result. The input
+// is usually a removable card, so a path with nothing at it means a typo or an
+// unmounted card far more often than it means an empty folder, and reporting
+// success for that is the one failure this tool must not have. filepath.Glob
+// could not tell the two apart: it returns no matches and no error for both.
 func inputFiles(dir string, targets map[string]string) ([]string, error) {
-	matches, err := filepath.Glob(filepath.Join(dir, "*"))
+	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, err
 	}
-	skip := map[string]bool{}
+
+	skip := make(map[string]bool, len(targets))
 	for _, target := range targets {
-		if abs, err := filepath.Abs(target); err == nil {
-			skip[abs] = true
+		abs, err := filepath.Abs(target)
+		if err != nil {
+			// Only reachable when the process has no working directory, which
+			// is not a per-file problem.
+			return nil, fmt.Errorf("resolving output path %s: %w", target, err)
 		}
+		skip[abs] = true
 	}
 
 	var files []string
-	for _, match := range matches {
-		// filepath.Match has no shell-style dotfile exemption, so "*" picks up
-		// .DS_Store and friends. They are never data files, and reporting them
-		// as Invalid looks like a malfunction.
-		if strings.HasPrefix(filepath.Base(match), ".") {
+	for _, entry := range entries {
+		name := entry.Name()
+		// filepath.Match has no shell-style dotfile exemption, so the old "*"
+		// glob picked up .DS_Store and friends. They are never data files, and
+		// reporting them as Invalid looks like a malfunction.
+		if strings.HasPrefix(name, ".") {
 			continue
 		}
-		info, err := os.Stat(match)
-		if err != nil || info.IsDir() {
+		if entry.IsDir() {
 			continue
 		}
-		if abs, err := filepath.Abs(match); err == nil && skip[abs] {
+		path := filepath.Join(dir, name)
+		// DirEntry.IsDir is false for a symlink to a directory, which the
+		// os.Stat this loop used to do would skip. Follow the link for that
+		// case alone, so the common case stays one readdir. A link that cannot
+		// be followed is kept: the read below then names it as a failure
+		// instead of dropping it silently.
+		if entry.Type()&os.ModeSymlink != 0 {
+			if info, err := os.Stat(path); err == nil && info.IsDir() {
+				continue
+			}
+		}
+		abs, err := filepath.Abs(path)
+		if err != nil {
+			return nil, fmt.Errorf("resolving %s: %w", path, err)
+		}
+		if skip[abs] {
 			continue
 		}
-		files = append(files, match)
+		files = append(files, path)
 	}
 	return files, nil
 }

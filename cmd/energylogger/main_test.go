@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"io"
 	"os"
@@ -212,14 +213,23 @@ func TestRunEmptyInputFolder(t *testing.T) {
 	}
 }
 
+// TestRunMissingInputFolder covers the tool's most likely real-world failure: a
+// mistyped path, or a card that is not mounted. It used to be indistinguishable
+// from an empty folder, and reported success.
 func TestRunMissingInputFolder(t *testing.T) {
+	outDir := filepath.Join(t.TempDir(), "out")
 	var sb strings.Builder
-	code := run([]string{"-input", filepath.Join(t.TempDir(), "nope"), "-output", t.TempDir()}, &sb)
-	if code != 0 {
-		t.Errorf("exit code = %d, want 0", code)
+	code := run([]string{"-input", filepath.Join(t.TempDir(), "nope"), "-output", outDir}, &sb)
+	if code != 1 {
+		t.Errorf("exit code = %d, want 1", code)
 	}
-	if !strings.Contains(sb.String(), "No valid Voltcraft data files found.") {
-		t.Errorf("expected the no-data message, got:\n%s", sb.String())
+	if !strings.Contains(sb.String(), "Failed to read folder") {
+		t.Errorf("expected the folder to be reported unreadable, got:\n%s", sb.String())
+	}
+	// The output folder is created only after the input folder has been read, so
+	// a typo does not litter the filesystem.
+	if _, err := os.Stat(outDir); !errors.Is(err, os.ErrNotExist) {
+		t.Errorf("the output folder was created despite the unusable input folder")
 	}
 }
 

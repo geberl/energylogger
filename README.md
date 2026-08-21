@@ -55,8 +55,10 @@ dropped. If any of the dropped samples carried *different* readings from the one
 kept, that is not a re-dump and a real measurement was lost, so the tool warns
 about it — see [Timestamps](#timestamps).
 
-Exit code is 0 on success, 1 if the output folder is unusable or a file could not
-be written, and 2 for a bad flag or environment variable.
+Exit code is 0 on success, 1 if the input folder cannot be read, the output
+folder is unusable, or a file could not be written, and 2 for a bad flag or
+environment variable. An input folder that does not exist is an error, not an
+empty run, since it usually means a mistyped path or an unmounted card.
 
 ### Output files
 
