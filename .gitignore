@@ -31,3 +31,4 @@ go.work.sum
 # .idea/
 # .vscode/
 energylogger
+my_own_testdata/*
